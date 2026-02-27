@@ -1,48 +1,38 @@
-// lib/scoring.ts
-
 import { QUESTIONS } from "./questions";
 import { KINK_KEYS, type KinkKey, type KinkScores } from "../types/kink";
 
 /**
- * answers: 0〜4 の配列
- * 戻り値: 0〜100 のパーセンテージ
+ * answers: 0〜4 の配列（QUESTIONS と同じ順）
+ * 戻り値: 各カテゴリの 0〜100(%) スコア
  */
 export function computeScores(answers: number[]): KinkScores {
-  // 初期化
-  const totals: Record<KinkKey, number> = {} as Record<KinkKey, number>;
-  const maxTotals: Record<KinkKey, number> = {} as Record<KinkKey, number>;
+  const sum: Partial<Record<KinkKey, number>> = {};
+  const cnt: Partial<Record<KinkKey, number>> = {};
 
-  for (const key of KINK_KEYS) {
-    totals[key] = 0;
-    maxTotals[key] = 0;
+  for (let i = 0; i < QUESTIONS.length; i++) {
+    const q = QUESTIONS[i] as { key: KinkKey };
+    const v = Number.isFinite(answers[i]) ? (answers[i] as number) : 0;
+
+    sum[q.key] = (sum[q.key] ?? 0) + v;
+    cnt[q.key] = (cnt[q.key] ?? 0) + 1;
   }
 
-  QUESTIONS.forEach((question, index) => {
-    const answer = answers[index] ?? 0; // 未回答は0扱い
-    const normalized = answer / 4; // 0〜4 → 0〜1
+  const out = {} as KinkScores;
 
-    if (!question.weights) return;
-
-    for (const key of KINK_KEYS) {
-      const weight = question.weights[key] ?? 0;
-      if (!weight) continue;
-
-      totals[key] += normalized * weight;
-      maxTotals[key] += 1 * weight;
-    }
-  });
-
-  const result: Record<KinkKey, number> = {} as Record<KinkKey, number>;
-
-  for (const key of KINK_KEYS) {
-    if (maxTotals[key] === 0) {
-      result[key] = 0;
-    } else {
-      result[key] = Math.round(
-        (totals[key] / maxTotals[key]) * 100
-      );
-    }
+  for (const k of KINK_KEYS) {
+    const s = sum[k] ?? 0;
+    const c = cnt[k] ?? 0;
+    const max = c * 4; // 0〜4 なので最大 4*c
+    const pct = max === 0 ? 0 : Math.round((s / max) * 100);
+    out[k] = clamp01to100(pct);
   }
 
-  return result;
+  return out;
+}
+
+function clamp01to100(n: number) {
+  if (!Number.isFinite(n)) return 0;
+  if (n < 0) return 0;
+  if (n > 100) return 100;
+  return Math.round(n);
 }

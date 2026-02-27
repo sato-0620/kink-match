@@ -1,5 +1,3 @@
-// types/kink.ts
-
 export const KINK_KEYS = [
   "dominant",
   "submissive",
@@ -19,8 +17,7 @@ export type KinkKey = (typeof KINK_KEYS)[number];
 
 export type KinkScores = Record<KinkKey, number>;
 
-// 結果表示を日本語にしたい時に使う
-export const KINK_LABELS: Record<KinkKey, string> = {
+export const KINK_LABELS_JA: Record<KinkKey, string> = {
   dominant: "優性",
   submissive: "サブミッシブ",
   sadist: "サディスト",
