@@ -12,10 +12,7 @@ type LatestPayload = {
 
 export default function ResultPage() {
   const [payload, setPayload] = useState<LatestPayload | null>(null);
-  const [shareUrl, setShareUrl] = useState<string>("");
-  const [shareStatus, setShareStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem("kinkmatch:latest");
@@ -24,8 +21,6 @@ export default function ResultPage() {
     try {
       const parsed = JSON.parse(raw);
 
-      // 想定: { scores, answers, at }
-      // 念のため、scoresだけ直で入ってるケースも吸収
       const normalized: LatestPayload =
         parsed?.scores && parsed?.answers
           ? parsed
@@ -54,8 +49,7 @@ export default function ResultPage() {
     if (!payload) return;
 
     try {
-      setShareStatus("loading");
-      setShareUrl("");
+      setLoading(true);
 
       const res = await fetch("/api/share", {
         method: "POST",
@@ -64,40 +58,31 @@ export default function ResultPage() {
       });
 
       if (!res.ok) {
-        setShareStatus("error");
         alert("共有リンクの作成に失敗しました");
+        setLoading(false);
         return;
       }
 
-      const data = (await res.json()) as { id?: string };
+      const data = await res.json();
       if (!data?.id) {
-        setShareStatus("error");
         alert("共有リンクの作成に失敗しました（IDなし）");
+        setLoading(false);
         return;
       }
 
-      const url = `${location.origin}/s/${data.id}`;
-      setShareUrl(url);
-      setShareStatus("success");
+      const shareUrl = `${location.origin}/s/${data.id}`;
 
-      // クリップボード（失敗してもURL表示はする）
+      // クリップボード（できれば）
       try {
-        await navigator.clipboard.writeText(url);
+        await navigator.clipboard.writeText(shareUrl);
       } catch {}
+
+      // ✅ 別導線：共有ページへ自動遷移
+      window.location.href = `/s/${data.id}`;
     } catch (e) {
       console.error(e);
-      setShareStatus("error");
       alert("共有リンクの作成に失敗しました（通信エラー）");
-    }
-  }
-
-  async function copyShareUrl() {
-    if (!shareUrl) return;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      alert("共有URLをコピーしました！");
-    } catch {
-      alert("コピーできなかったので、表示されたURLを手動でコピーしてね");
+      setLoading(false);
     }
   }
 
@@ -130,7 +115,7 @@ export default function ResultPage() {
           </div>
         ))}
 
-        {/* 相性チェック導線 */}
+        {/* 相性チェック */}
         <div className="pt-6 text-center">
           <a
             href="/match"
@@ -138,57 +123,17 @@ export default function ResultPage() {
           >
             相性チェックへ
           </a>
-          <div className="text-xs text-white/50 mt-2">
-            ※相手の共有リンク（/s/xxxx）を貼ると相性が出る
-          </div>
         </div>
 
-        {/* 共有 */}
-        <div className="pt-2 space-y-3">
-          <div className="text-center">
-            <button
-              onClick={createShare}
-              disabled={shareStatus === "loading"}
-              className="inline-block bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:hover:bg-white/10 px-6 py-2 rounded text-white"
-            >
-              {shareStatus === "loading"
-                ? "共有リンク作成中..."
-                : "共有リンクを作る"}
-            </button>
-          </div>
-
-          {shareUrl && (
-            <div className="text-xs text-white/70 break-all text-center space-y-2">
-              <div>共有URL：</div>
-              <a
-                className="underline"
-                href={shareUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {shareUrl}
-              </a>
-
-              <div className="flex gap-2 justify-center pt-1">
-                <button
-                  onClick={copyShareUrl}
-                  className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded text-white"
-                >
-                  URLをコピー
-                </button>
-                <a
-                  href="/match"
-                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-white"
-                >
-                  相性チェックへ
-                </a>
-              </div>
-
-              <div className="text-white/50">
-                ※コピーできない場合はURLを手動でコピーしてね
-              </div>
-            </div>
-          )}
+        {/* 共有リンク作成（別導線） */}
+        <div className="pt-4 text-center">
+          <button
+            onClick={createShare}
+            disabled={loading}
+            className="inline-block bg-white/10 hover:bg-white/20 disabled:opacity-50 px-6 py-2 rounded text-white"
+          >
+            {loading ? "共有リンク作成中..." : "共有リンクを作る"}
+          </button>
         </div>
 
         {/* もう一度 */}
