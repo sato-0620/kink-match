@@ -1,38 +1,55 @@
-import { QUESTIONS } from "./questions";
-import { KINK_KEYS, type KinkKey, type KinkScores } from "../types/kink";
+// lib/scoring.ts
+import { QUESTIONS } from "@/lib/questions";
+import { KINK_KEYS, type KinkKey, type KinkScores } from "@/types/kink";
 
 /**
- * answers: 0〜4 の配列（QUESTIONS と同じ順）
- * 戻り値: 各カテゴリの 0〜100(%) スコア
+ * answers: 0〜4 の配列（QUESTIONSと同じ長さ）
+ * 0=全く当てはまらない ... 4=強く当てはまる
  */
 export function computeScores(answers: number[]): KinkScores {
-  const sum: Partial<Record<KinkKey, number>> = {};
-  const cnt: Partial<Record<KinkKey, number>> = {};
+  // 初期化
+  const raw: Record<KinkKey, number> = Object.fromEntries(
+    KINK_KEYS.map((k) => [k, 0])
+  ) as Record<KinkKey, number>;
 
-  for (let i = 0; i < QUESTIONS.length; i++) {
-    const q = QUESTIONS[i] as { key: KinkKey };
-    const v = Number.isFinite(answers[i]) ? (answers[i] as number) : 0;
+  const maxPossible: Record<KinkKey, number> = Object.fromEntries(
+    KINK_KEYS.map((k) => [k, 0])
+  ) as Record<KinkKey, number>;
 
-    sum[q.key] = (sum[q.key] ?? 0) + v;
-    cnt[q.key] = (cnt[q.key] ?? 0) + 1;
-  }
+  QUESTIONS.forEach((q, idx) => {
+    const a = clampAnswer(answers[idx] ?? 0); // 0..4
+    const w = (q as any).weights as Partial<Record<KinkKey, number>> | undefined;
+    if (!w) return;
 
-  const out = {} as KinkScores;
+    (Object.keys(w) as KinkKey[]).forEach((k) => {
+      const weight = Number(w[k] ?? 0);
+      if (!Number.isFinite(weight) || weight === 0) return;
 
-  for (const k of KINK_KEYS) {
-    const s = sum[k] ?? 0;
-    const c = cnt[k] ?? 0;
-    const max = c * 4; // 0〜4 なので最大 4*c
-    const pct = max === 0 ? 0 : Math.round((s / max) * 100);
-    out[k] = clamp01to100(pct);
-  }
+      raw[k] += a * weight;
+      maxPossible[k] += 4 * weight;
+    });
+  });
 
-  return out;
+  // 0〜100%へ正規化
+  const scores = Object.fromEntries(
+    KINK_KEYS.map((k) => {
+      const max = maxPossible[k];
+      const pct = max > 0 ? Math.round((raw[k] / max) * 100) : 0;
+      return [k, clampPct(pct)];
+    })
+  ) as KinkScores;
+
+  return scores;
 }
 
-function clamp01to100(n: number) {
-  if (!Number.isFinite(n)) return 0;
-  if (n < 0) return 0;
-  if (n > 100) return 100;
-  return Math.round(n);
+function clampAnswer(n: number) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(4, Math.round(x)));
+}
+
+function clampPct(n: number) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(100, Math.round(x)));
 }

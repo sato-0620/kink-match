@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { QUESTIONS } from "../../lib/questions";
-import { computeScores } from "../../lib/scoring";
+import { QUESTIONS } from "@/lib/questions";
+import { computeScores } from "@/lib/scoring";
 
 const CHOICES = [
   { v: 0, label: "全く当てはまらない" },
@@ -70,7 +70,7 @@ export default function DiagnosisPage() {
           </Link>
         </div>
 
-        <p className="mt-2 text-zinc-400">30問。直感でOK。</p>
+        <p className="mt-2 text-zinc-400">{total}問。直感でOK。</p>
 
         <div className="mt-6 rounded-lg border border-zinc-800 p-4">
           <div className="flex items-center justify-between text-sm text-zinc-400">
