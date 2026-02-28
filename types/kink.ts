@@ -19,16 +19,16 @@ export type KinkKey = (typeof KINK_KEYS)[number];
 export type KinkScores = Record<KinkKey, number>;
 
 export const LABELS_JA: Record<KinkKey, string> = {
-  dominant: "優性",
+  dominant: "ドミナント",
   submissive: "サブミッシブ",
   sadist: "サディスト",
   masochist: "マゾヒスト",
   rigger: "リガー",
   ropeBunny: "ロープバニー",
-  degrader: "劣化装置",
+  degrader: "デグレーダー",
   degradee: "デグレード",
   owner: "オーナー",
   pet: "ペット",
-  ageplayer: "年齢プレイヤー",
+  ageplayer: "エイジプレイヤー",
   switch: "スイッチ",
 };
