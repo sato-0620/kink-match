@@ -13,14 +13,19 @@ type Payload = {
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const key = `share:${params.id}`;
-  const data = (await kv.get<Payload>(key)) ?? null;
+  try {
+    const { id } = await params;
+    const key = `share:${id}`;
 
-  if (!data) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
+    const data = await kv.get<Payload>(key);
+    if (!data) {
+      return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+
+    return NextResponse.json(data, { status: 200 });
+  } catch (e) {
+    return NextResponse.json({ error: "server_error" }, { status: 500 });
   }
-
-  return NextResponse.json(data);
 }
