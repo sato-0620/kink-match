@@ -91,6 +91,16 @@ export default function ResultPage() {
     }
   }
 
+  async function copyShareUrl() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert("共有URLをコピーしました！");
+    } catch {
+      alert("コピーできなかったので、表示されたURLを手動でコピーしてね");
+    }
+  }
+
   if (!payload) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -120,8 +130,21 @@ export default function ResultPage() {
           </div>
         ))}
 
+        {/* 相性チェック導線 */}
+        <div className="pt-6 text-center">
+          <a
+            href="/match"
+            className="inline-block bg-white/10 hover:bg-white/20 px-6 py-2 rounded text-white"
+          >
+            相性チェックへ
+          </a>
+          <div className="text-xs text-white/50 mt-2">
+            ※相手の共有リンク（/s/xxxx）を貼ると相性が出る
+          </div>
+        </div>
+
         {/* 共有 */}
-        <div className="pt-6 space-y-3">
+        <div className="pt-2 space-y-3">
           <div className="text-center">
             <button
               onClick={createShare}
@@ -135,7 +158,7 @@ export default function ResultPage() {
           </div>
 
           {shareUrl && (
-            <div className="text-xs text-white/70 break-all text-center space-y-1">
+            <div className="text-xs text-white/70 break-all text-center space-y-2">
               <div>共有URL：</div>
               <a
                 className="underline"
@@ -145,6 +168,22 @@ export default function ResultPage() {
               >
                 {shareUrl}
               </a>
+
+              <div className="flex gap-2 justify-center pt-1">
+                <button
+                  onClick={copyShareUrl}
+                  className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded text-white"
+                >
+                  URLをコピー
+                </button>
+                <a
+                  href="/match"
+                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-white"
+                >
+                  相性チェックへ
+                </a>
+              </div>
+
               <div className="text-white/50">
                 ※コピーできない場合はURLを手動でコピーしてね
               </div>
