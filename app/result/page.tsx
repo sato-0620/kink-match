@@ -1,86 +1,46 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { KINK_KEYS, LABELS_JA, type KinkKey, type KinkScores } from "@/types/kink";
+import { KINK_KEYS, LABELS_JA, type KinkScores } from "@/types/kink";
 
-type StoredLatest =
-  | { scores: KinkScores; answers?: number[]; at?: number }
-  | KinkScores;
-
-function isKinkScores(v: unknown): v is KinkScores {
-  if (!v || typeof v !== "object") return false;
-  // 全キーが number を持ってるか（最低限）
-  return KINK_KEYS.every((k) => typeof (v as any)[k] === "number");
-}
+type StoredPayload = {
+  scores: KinkScores;
+  answers: number[];
+  at: number;
+};
 
 export default function ResultPage() {
   const [scores, setScores] = useState<KinkScores | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const raw = localStorage.getItem("kinkmatch:latest");
-    if (!raw) {
-      setError("結果が見つかりません（診断を先に実行してください）。");
-      return;
-    }
+    if (!raw) return;
 
     try {
-      const parsed: StoredLatest = JSON.parse(raw);
+      const parsed: StoredPayload = JSON.parse(raw);
 
-      // ① {scores, answers, at} 形式
-      if (parsed && typeof parsed === "object" && "scores" in parsed) {
-        const maybeScores = (parsed as any).scores;
-        if (isKinkScores(maybeScores)) {
-          setScores(maybeScores);
-          return;
-        }
-      }
-
-      // ② 直接 KinkScores を保存してた古い形式にも対応
-      if (isKinkScores(parsed)) {
-        setScores(parsed);
-        return;
-      }
-
-      setError("保存された結果データの形式が不正です。");
+      // ✅ scoresだけ取り出す（ここミスると0/NaNになりがち）
+      setScores(parsed.scores);
     } catch (e) {
-      console.error(e);
-      setError("スコアの読み込みに失敗しました。");
+      console.error("スコアの読み込みに失敗しました", e);
     }
   }, []);
 
-  // 🔥 大きい順に並び替え（同点は日本語ラベル順で安定化）
   const rows = useMemo(() => {
     if (!scores) return [];
     return KINK_KEYS
       .map((k) => ({
         key: k,
         label: LABELS_JA[k] ?? k,
-        value: Math.round(scores[k]),
+        value: Number(scores[k] ?? 0),
       }))
-      .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label, "ja"));
+      .sort((a, b) => b.value - a.value);
   }, [scores]);
-
-  if (error) {
-    return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center px-6">
-        <div className="max-w-md w-full text-center space-y-4">
-          <p className="text-zinc-200">{error}</p>
-          <a
-            href="/diagnosis"
-            className="inline-block bg-red-600 hover:bg-red-700 px-6 py-2 rounded text-white"
-          >
-            診断へ戻る
-          </a>
-        </div>
-      </main>
-    );
-  }
 
   if (!scores) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-zinc-400">読み込み中…</p>
+        <p>結果が見つかりません。</p>
       </main>
     );
   }
@@ -92,7 +52,7 @@ export default function ResultPage() {
 
         {rows.map(({ key, label, value }) => (
           <div key={key} className="space-y-2">
-            <div className="flex justify-between text-sm text-zinc-200">
+            <div className="flex justify-between text-sm">
               <span>{label}</span>
               <span>{value}%</span>
             </div>
@@ -100,7 +60,7 @@ export default function ResultPage() {
             <div className="w-full h-2 bg-zinc-800 rounded">
               <div
                 className="h-2 bg-red-600 rounded"
-                style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+                style={{ width: `${value}%` }}
               />
             </div>
           </div>
